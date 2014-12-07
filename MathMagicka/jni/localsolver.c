@@ -63,7 +63,7 @@ char* substring(const char* string, int i, int j){
 	return substrings;
 }
 
-JNIEXPORT jstring JNICALL Java_com_cs241honors_android_ocr_simple_MathMagickaActivity_simpleSolver(
+JNIEXPORT jstring JNICALL Java_com_cs241honors_mathmagicka_MathMagickaActivity_simpleSolver(
 	JNIEnv * env, jobject obj, jstring jequation){
 
 	int * bool = malloc(sizeof(int));

@@ -1,4 +1,4 @@
-package com.cs241honors.android.ocr.simple;
+package com.cs241honors.mathmagicka;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -29,16 +29,16 @@ import android.widget.EditText;
 import com.googlecode.tesseract.android.TessBaseAPI;
 
 public class MathMagickaActivity extends Activity {
-	public static final String PACKAGE_NAME = "com.datumdroid.android.ocr.simple";
+	public static final String PACKAGE_NAME = "com.cs241honors.mathmagicka";
 	public static final String DATA_PATH = Environment
-			.getExternalStorageDirectory().toString() + "/SimpleAndroidOCR/";
+			.getExternalStorageDirectory().toString() + "/MathMagicka/";
 	
 	// You should have the trained data file in assets folder
 	// You can get them at:
 	// http://code.google.com/p/tesseract-ocr/downloads/list
 	public static final String lang = "eng";
 
-	private static final String TAG = "SimpleAndroidOCR.java";
+	private static final String TAG = "MathMagicka.java";
 
 	protected Button _btn_camera;
 	protected Button _btn_compute;
@@ -282,10 +282,5 @@ public class MathMagickaActivity extends Activity {
 			_field.setText(_field.getText().toString().length() == 0 ? recognizedText : _field.getText() + " " + recognizedText);
 			_field.setSelection(_field.getText().toString().length());
 		}
-		
-		// Cycle done.
 	}
-	
-	// www.Gaut.am was here
-	// Thanks for reading!
 }
