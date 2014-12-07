@@ -1,4 +1,4 @@
-ssolve
+MathMagicka
 ======
 
-OCR based equation solver
+_Basic_ Android equation solver (with OCR capabilities)

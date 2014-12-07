@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MathMagicka</string>
+    <string name="button_text">Camera</string>
+    <string name="text_hint">Type in equation or use camera</string>
+    <string name="button_compute_text">Compute</string>
+
+</resources>
