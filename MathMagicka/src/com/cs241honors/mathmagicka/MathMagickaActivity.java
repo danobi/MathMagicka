@@ -17,6 +17,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.media.ExifInterface;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -32,17 +33,11 @@ public class MathMagickaActivity extends Activity {
 	public static final String PACKAGE_NAME = "com.cs241honors.mathmagicka";
 	public static final String DATA_PATH = Environment
 			.getExternalStorageDirectory().toString() + "/MathMagicka/";
-	
-	// You should have the trained data file in assets folder
-	// You can get them at:
-	// http://code.google.com/p/tesseract-ocr/downloads/list
 	public static final String lang = "eng";
-
 	private static final String TAG = "MathMagicka.java";
 
 	protected Button _btn_camera;
 	protected Button _btn_compute;
-	// protected ImageView _image;
 	protected EditText _field;
 	protected EditText _output;
 	protected String _path;
@@ -82,28 +77,20 @@ public class MathMagickaActivity extends Activity {
 
 		}
 		
-		// lang.traineddata file with the app (in assets folder)
-		// You can get them at:
-		// http://code.google.com/p/tesseract-ocr/downloads/list
-		// This area needs work and optimization
 		if (!(new File(DATA_PATH + "tessdata/" + lang + ".traineddata")).exists()) {
 			try {
-
 				AssetManager assetManager = getAssets();
 				InputStream in = assetManager.open("tessdata/" + lang + ".traineddata");
-				//GZIPInputStream gin = new GZIPInputStream(in);
 				OutputStream out = new FileOutputStream(DATA_PATH
 						+ "tessdata/" + lang + ".traineddata");
 
 				// Transfer bytes from in to out
 				byte[] buf = new byte[1024];
 				int len;
-				//while ((lenf = gin.read(buff)) > 0) {
 				while ((len = in.read(buf)) > 0) {
 					out.write(buf, 0, len);
 				}
 				in.close();
-				//gin.close();
 				out.close();
 				
 				Log.v(TAG, "Copied " + lang + " traineddata");
@@ -142,23 +129,34 @@ public class MathMagickaActivity extends Activity {
 			
 			Log.v(TAG, "Running local solve code");
 			String input = _field.getText().toString().trim();
-			String output = "...";
+			//String output = "...";
 			try{ 
-				output = simpleSolver(input);
+				//output = simpleSolver(input);
+				_field.setText("solve code running..."); // this is to provide the user some progress info
+				new ProcessInput().execute(input);       // this will run in the background
 			}
 			catch (Exception e){
-				_field.setText("ERROR -> simpleSolver");
+				_field.setText("ERROR -> simpleSolver thread");
 				return;
 			}
 			
-			// TODO: we should use a condition variable here until
-			// equation is done being solved
-			_field.setText("solve code running...");
-			
-			// run this after equation is done being solved
-			_field.setText("solve code done, see below");
-			_output.setText("Solution: " + output);
-			
+		}
+		// synchronization stuff
+		private class ProcessInput extends AsyncTask<String,Integer,String> {
+			protected void onProgressUpdate(Integer progress){
+				// we could have a loading bar if we wanted here
+				//setProgressPercent(progress[0]);
+			}
+			protected void onPostExecute(String output){
+				_field.setText("Input solved, see below");
+				_output.setText("Solution: " + output);
+			}
+			@Override
+			protected String doInBackground(String... inputs) {
+				// here we could do API calls, linear algebra libraries, whatever, all
+				// of it will be in the background :0
+				return simpleSolver(inputs[0]);
+			}
 		}
 	}
 
@@ -181,7 +179,7 @@ public class MathMagickaActivity extends Activity {
 		Log.i(TAG, "resultCode: " + resultCode);
 
 		if (resultCode == -1) {
-			onPhotoTaken();
+			onEquationPhotoTaken();
 		} else {
 			Log.v(TAG, "User cancelled");
 		}
@@ -196,11 +194,11 @@ public class MathMagickaActivity extends Activity {
 	protected void onRestoreInstanceState(Bundle savedInstanceState) {
 		Log.i(TAG, "onRestoreInstanceState()");
 		if (savedInstanceState.getBoolean(MathMagickaActivity.PHOTO_TAKEN)) {
-			onPhotoTaken();
+			onEquationPhotoTaken();
 		}
 	}
 
-	protected void onPhotoTaken() {
+	protected void onEquationPhotoTaken() {
 		_taken = true;
 
 		BitmapFactory.Options options = new BitmapFactory.Options();
@@ -209,53 +207,12 @@ public class MathMagickaActivity extends Activity {
 		Bitmap bitmap = BitmapFactory.decodeFile(_path, options);
 
 		try {
-			ExifInterface exif = new ExifInterface(_path);
-			int exifOrientation = exif.getAttributeInt(
-					ExifInterface.TAG_ORIENTATION,
-					ExifInterface.ORIENTATION_NORMAL);
-
-			Log.v(TAG, "Orient: " + exifOrientation);
-
-			int rotate = 0;
-
-			switch (exifOrientation) {
-			case ExifInterface.ORIENTATION_ROTATE_90:
-				rotate = 90;
-				break;
-			case ExifInterface.ORIENTATION_ROTATE_180:
-				rotate = 180;
-				break;
-			case ExifInterface.ORIENTATION_ROTATE_270:
-				rotate = 270;
-				break;
-			}
-
-			Log.v(TAG, "Rotation: " + rotate);
-
-			if (rotate != 0) {
-
-				// Getting width & height of the given image.
-				int w = bitmap.getWidth();
-				int h = bitmap.getHeight();
-
-				// Setting pre rotate
-				Matrix mtx = new Matrix();
-				mtx.preRotate(rotate);
-
-				// Rotating Bitmap
-				bitmap = Bitmap.createBitmap(bitmap, 0, 0, w, h, mtx, false);
-			}
-
-			// Convert to ARGB_8888, required by tess
+			// we are required to convert to ARGB_8888 for the tesseract engine
 			bitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
 
-		} catch (IOException e) {
-			Log.e(TAG, "Couldn't correct orientation: " + e.toString());
+		} catch (Exception e){
+			Log.e(TAG, "Could not convert bitmap to ARGB_8888: " + e.toString());
 		}
-
-		// _image.setImageBitmap( bitmap );
-		
-		Log.v(TAG, "Before baseApi");
 
 		TessBaseAPI baseApi = new TessBaseAPI();
 		baseApi.setDebug(true);
@@ -266,20 +223,18 @@ public class MathMagickaActivity extends Activity {
 		
 		baseApi.end();
 
-		// You now have the text in recognizedText var, you can do anything with it.
-		// We will display a stripped out trimmed alpha-numeric version of it (if lang is eng)
-		// so that garbage doesn't make it to the display.
+		// Strip returned text down to alpha-numerics
+		Log.v(TAG, "Raw OCR text: " + recognizedText);
 
-		Log.v(TAG, "OCRED TEXT: " + recognizedText);
-
+		// only strip if lang is eng
 		if ( lang.equalsIgnoreCase("eng") ) {
 			recognizedText = recognizedText.replaceAll("[^a-zA-Z0-9]+", " ");
 		}
 		
 		recognizedText = recognizedText.trim();
 
-		if ( recognizedText.length() != 0 ) {
-			_field.setText(_field.getText().toString().length() == 0 ? recognizedText : _field.getText() + " " + recognizedText);
+		if (recognizedText.length() != 0) {
+			_field.setText(recognizedText);
 			_field.setSelection(_field.getText().toString().length());
 		}
 	}
